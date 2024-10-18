@@ -86,16 +86,16 @@ def train_main(args):
     # So be sure about which parameter/feature needs this or not.
 
     cfg.workflow = [("train", 1), ("val", 1)]
-    cfg.optimizer.lr = args.learning_rate
+    cfg.optimizer.lr = float(args.learning_rate)
     cfg.lr_config.warmup = args.warm_up
     if args.steps_decay is not None:
         cfg.lr_config.step = args.steps_decay
     cfg.runner.max_epochs = args.max_epochs
 
     if args.momentum is not None:
-        cfg.optimizer.momentum = args.momentum
+        cfg.optimizer.momentum = float(args.momentum)
     if args.weight_decay is not None:
-        cfg.optimizer.weight_decay = args.weight_decay
+        cfg.optimizer.weight_decay = float(args.weight_decay)
 
     if args.model_type == "Def_DETR" and args.dropout is not None:
         cfg.model.bbox_head.transformer.encoder.transformerlayers.ffn_dropout = args.dropout
