@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import os.path as osp
+import sys # remove for pull request
 
 import mmcv
 import pkg_resources
@@ -11,6 +12,8 @@ from mmdet.apis.train import set_random_seed, train_detector
 from mmdet.datasets.builder import build_dataset
 from mmdet.models.builder import build_detector
 
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)) # remove for pull request
+sys.path.append(parent_dir) # remove when pull request
 from spine_detection.utils.data_utils import DATASETS, SpineDataset
 from spine_detection.utils.logger_utils import setup_custom_logger
 from spine_detection.utils.model_utils import (
@@ -22,6 +25,10 @@ from spine_detection.utils.model_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# tmp
+from torch.utils.cpp_extension import CUDA_HOME
+print('CUDA_HOME: ', CUDA_HOME)
 
 
 def train_main(args):
@@ -81,21 +88,32 @@ def train_main(args):
         + str(args.special_term),
     )
 
+    cfg.data_root = args.image_dir
+    print(cfg.data_root)
+    
+    cfg.data.train.img_prefix = args.image_dir
+    cfg.data.test.img_prefix = args.image_dir
+    cfg.data.val.img_prefix = args.image_dir
+
+    cfg.data.train.ann_file = os.path.join(args.annotation_dir, 'train.csv')
+    cfg.data.val.ann_file = os.path.join(args.annotation_dir, 'valid.csv')
+    cfg.data.test.ann_file = os.path.join(args.annotation_dir, 'test.csv')
+
     # # # NOTE: the usage of 'if args.XYZ is not None:' means that if the parser passes a value of type None,
     # the config file will not be updated inside train_mmdet.py and thus keeps its default config of that feature!
     # So be sure about which parameter/feature needs this or not.
 
     cfg.workflow = [("train", 1), ("val", 1)]
-    cfg.optimizer.lr = args.learning_rate
+    cfg.optimizer.lr = float(args.learning_rate)
     cfg.lr_config.warmup = args.warm_up
     if args.steps_decay is not None:
         cfg.lr_config.step = args.steps_decay
     cfg.runner.max_epochs = args.max_epochs
 
     if args.momentum is not None:
-        cfg.optimizer.momentum = args.momentum
+        cfg.optimizer.momentum = float(args.momentum)
     if args.weight_decay is not None:
-        cfg.optimizer.weight_decay = args.weight_decay
+        cfg.optimizer.weight_decay = float(args.weight_decay)
 
     if args.model_type == "Def_DETR" and args.dropout is not None:
         cfg.model.bbox_head.transformer.encoder.transformerlayers.ffn_dropout = args.dropout
@@ -134,6 +152,9 @@ def train_main(args):
 
     # Create work_dir
     mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
+
+    # Copy the config file to the work_dir
+    cfg.dump(osp.join(cfg.work_dir, "config.py"))
 
     # Train the detector
     train_detector(model, datasets, cfg, distributed=False, validate=True)

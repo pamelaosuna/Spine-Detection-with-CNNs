@@ -1,3 +1,4 @@
+import os
 import random
 from collections import OrderedDict
 from typing import List, Optional, Tuple
@@ -22,6 +23,7 @@ class SpineDataset(CustomDataset):
         """
 
         ann_df = pd.read_csv(ann_csv_file, encoding="utf-8")
+        ann_df["filename"] = [os.path.basename(f) for f in ann_df["filename"].values]
         # get all img names
         img_list = list(sorted(ann_df["filename"].values.tolist()))
         # make them unique

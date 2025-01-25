@@ -189,6 +189,7 @@ class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
 
 
 def parse_args(mode: str = "predict") -> argparse.Namespace:
+    print('>>> About to parse args')
     desc = {
         "train": "Train a model with given config and checkpoint file",
         "predict": "Make prediction on images",
@@ -204,6 +205,12 @@ def parse_args(mode: str = "predict") -> argparse.Namespace:
         parser.add_argument("-tr", "--train_csv", default=None, help="annotation file for training data")
         parser.add_argument(
             "-sp", "--special_term", default="", help="name appendix to store in different train folders"
+        )
+        parser.add_argument(
+            "-im", "--image_dir", default="data/raw/", help="directory where the images are stored for training/val/test" 
+        )
+        parser.add_argument(
+            "-ann", "--annotation_dir", default="data/default_annotations/", help="directory where csv files with annotations are stored"
         )
         parser.add_argument(
             "-m",

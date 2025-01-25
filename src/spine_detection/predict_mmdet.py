@@ -16,6 +16,8 @@ from mmcv import Config
 from mmdet.apis import inference_detector, init_detector
 from tqdm import tqdm
 
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)) # remove for pull request
+sys.path.append(parent_dir) # remove when pull request
 from spine_detection.utils.data_utils import calc_metric_xy
 from spine_detection.utils.logger_utils import setup_custom_logger
 from spine_detection.utils.model_utils import (
@@ -252,7 +254,7 @@ def predict_images(
 def predict_main(args):
     start = time.time()
     # if it doesn't make sense, print warning
-    if args.use_csv is not None and not args.save_images:
+    if args.use_csv and not args.save_images:
         logger.warning(
             "As you are using csv files, not saving any detections will result in doing nothing. "
             "So images are saved."
@@ -276,7 +278,11 @@ def predict_main(args):
     model_name = args.model.split("/")[-1] if args.model.split("/")[-1] != "" else args.model.split("/")[-2]
     if args.output is None:
         args.output = os.path.join("output/prediction/", model_name, args.param_config)
-    output_path = os.path.join(args.output, "images_mmdet")
+    
+    if args.save_images:
+        output_path = os.path.join(args.output, "images_mmdet")
+    else:
+        output_path = None
 
     # create folder for prediction csvs if not already done
     if not args.use_csv:
