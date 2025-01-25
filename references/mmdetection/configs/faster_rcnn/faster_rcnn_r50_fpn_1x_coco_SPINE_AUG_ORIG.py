@@ -2,17 +2,15 @@
 model = dict(
     type='FasterRCNN',
     backbone=dict(
-        type='ResNeXt',
-        depth=101,
-        groups=64,
-        base_width=4,
+        type='ResNet',
+        depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
         norm_cfg=dict(type='BN', requires_grad=True),
+        norm_eval=True,
         style='pytorch',
-        init_cfg=dict(
-            type='Pretrained', checkpoint='open-mmlab://resnext101_64x4d')),
+        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -109,7 +107,7 @@ model = dict(
 # dataset settings
 dataset_type = 'SpineDataset'
 classes = ['spine']
-data_root = ''
+data_root = 'data/raw'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 albu_train_transforms = [
@@ -190,37 +188,44 @@ data = dict(
     train=dict(
         type=dataset_type,
         classes=classes,
-        ann_file='train.csv',
-        img_prefix=data_root,
+        ann_file='data/default_annotations/train.csv',
+        img_prefix='',
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         classes=classes,
-        ann_file='valid.csv',
-        img_prefix=data_root,
+        ann_file='data/default_annotations/valid.csv',
+        img_prefix='',
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         classes=classes,
-        ann_file='test.csv',
-        img_prefix=data_root,
+        ann_file='data/default_annotations/test.csv',
+        img_prefix='',
         pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='mAP')
 
 # optimizer
-# optimizer = dict(type='Adam', lr=0.00002, weight_decay=0.0003)
-optimizer = dict(type='SGD', lr=0.00002, momentum=0.9, weight_decay=0.0003)
+# optimizer = dict(type='SGD', lr=0.00002, momentum=0.9, weight_decay=0.0003)
+optimizer = dict(
+    type='AdamW',
+    lr=2e-4,
+    weight_decay=0.0001,
+    paramwise_cfg=dict(
+        custom_keys={
+            'backbone': dict(lr_mult=0.1),
+            'sampling_offsets': dict(lr_mult=0.1),
+            'reference_points': dict(lr_mult=0.1)
+        }))
 # optimizer_config = dict(grad_clip=dict(max_norm=2, norm_type=2))
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(
     policy='step',
-    min_lr=0.00003,
-    gamma=0.3,
     warmup='linear',
-    warmup_iters=400,
+    warmup_iters=500,
     warmup_ratio=0.001,
-    step=[40])
+    step=[12, 16])
 runner = dict(type='EpochBasedRunner', max_epochs=10)
 
 checkpoint_config = dict(interval=1)
