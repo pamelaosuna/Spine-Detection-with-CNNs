@@ -141,6 +141,7 @@ def df_to_data(df: pd.DataFrame):
     # get rects (boxes+scores) and classes for this specific dataframe
     rects = np.zeros((len(df), 5))
     scores = np.zeros(len(df))
+    classes = np.zeros(len(df))
 
     if len(df) == 0:
         return rects, scores
@@ -252,7 +253,7 @@ def predict_images(
 def predict_main(args):
     start = time.time()
     # if it doesn't make sense, print warning
-    if args.use_csv is not None and not args.save_images:
+    if args.use_csv and not args.save_images:
         logger.warning(
             "As you are using csv files, not saving any detections will result in doing nothing. "
             "So images are saved."
@@ -276,7 +277,11 @@ def predict_main(args):
     model_name = args.model.split("/")[-1] if args.model.split("/")[-1] != "" else args.model.split("/")[-2]
     if args.output is None:
         args.output = os.path.join("output/prediction/", model_name, args.param_config)
-    output_path = os.path.join(args.output, "images_mmdet")
+
+    if args.save_images:
+        output_path = os.path.join(args.output, "images_mmdet")
+    else:
+        output_path = None
 
     # create folder for prediction csvs if not already done
     if not args.use_csv:
@@ -288,6 +293,7 @@ def predict_main(args):
 
     if args.output and not os.path.exists(args.output):
         os.makedirs(args.output)
+        
     if args.save_images and not os.path.exists(output_path):
         os.makedirs(output_path)
 

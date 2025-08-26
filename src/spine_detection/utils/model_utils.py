@@ -206,6 +206,13 @@ def parse_args(mode: str = "predict") -> argparse.Namespace:
             "-sp", "--special_term", default="", help="name appendix to store in different train folders"
         )
         parser.add_argument(
+            "-im", "--image_dir", default="data/raw/", help="directory where the images are stored for training/val/test" 
+        )
+        parser.add_argument(
+            "-ann", "--annotation_dir", default="data/default_annotations/", help="directory where csv files with annotations are stored"
+        )
+
+        parser.add_argument(
             "-m",
             "--model",
             help="Model used for prediction (without frozen_inference_graph.pb!) or folder "
@@ -224,6 +231,7 @@ def parse_args(mode: str = "predict") -> argparse.Namespace:
             action="store_true",
             help="decide to load the config file with or without data augmentation",
         )
+        
         parser.add_argument("-sd", "--seed_data", default=0, help="seed for the data loader, random if None")
         parser.add_argument("-sw", "--seed_weights", default=0, help="seed for initial random weights")
         # The following arguments are primary parameters for optimization
@@ -232,7 +240,7 @@ def parse_args(mode: str = "predict") -> argparse.Namespace:
         parser.add_argument("-me", "--max_epochs", default=10, type=int)
         parser.add_argument("-wu", "--warm_up", default=None, help="learning rate warm up, use None to disable")
         parser.add_argument("-st", "--steps_decay", default=None, help="steps for lr decay")
-        parser.add_argument("-mom", "--momentum", default=None, help="only for optimizer SGD")
+        parser.add_argument("-mom", "--momentum", default=None, type=float, help="only for optimizer SGD")
         parser.add_argument("-wd", "--weight_decay", default=None, help="only for optimizer SGD")
         parser.add_argument("-do", "--dropout", default=None, help="overloading this parameter, varies by model type!")
 
@@ -306,6 +314,13 @@ def parse_args(mode: str = "predict") -> argparse.Namespace:
             )
 
         if mode == "tracking":
+            parser.add_argument(
+                "-img",
+                "--images",
+                required=False,
+                help="Path to input images, used to draw the tracked spines on the images.",
+            )
+
             parser.add_argument(
                 "-T",
                 "--tif",

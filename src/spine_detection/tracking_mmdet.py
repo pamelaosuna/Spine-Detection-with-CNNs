@@ -1,5 +1,5 @@
 import argparse
-import glob
+from glob import glob
 import logging
 import os
 from collections import OrderedDict
@@ -17,7 +17,7 @@ from spine_detection.utils.data_utils import csv_to_boxes
 from spine_detection.utils.logger_utils import setup_custom_logger
 from spine_detection.utils.model_utils import load_model, parse_args
 from spine_detection.utils.opencv_utils import draw_boxes, image_load_encode
-from spine_detection.utils.tracker import CentroidTracker as CT
+from spine_detection.utils.tracker import RectTracker as RT
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ def tracking_main(args):
 
     # to get some annotations on the first images too, make the same backwards
     if args.input_mode == "Test":
-        all_imgs = sorted(glob.glob(args.images))
+        all_imgs = sorted(glob(args.images))
     elif args.input_mode == "Train" or args.input_mode == "Val":
         df = pd.read_csv(args.images)
         all_imgs = df["filename"].tolist()
@@ -102,7 +102,7 @@ def tracking_main(args):
 
     # if it's just a single csv file, load all data before iterating over images
     if args.csv is not None:
-        all_csv_files = glob.glob(args.csv)
+        all_csv_files = glob(args.csv)
         if len(all_csv_files) == 0:
             raise ValueError("No csv files with valid prediction data are available.")
         csv_path = args.csv
@@ -124,9 +124,9 @@ def tracking_main(args):
             input_mode=args.input_mode,
         )
 
-    all_csv_paths = list(Path().rglob(args.csv))
+    all_csv_paths = list(glob(args.csv))
 
-    ct = CT(
+    rt = RT(
         maxDisappeared=MAX_DIS,
         minAppeared=MIN_APP,
         maxDiff=MAX_DIFF,
@@ -156,7 +156,7 @@ def tracking_main(args):
         if args.csv is not None:  # PART with no new prediction, instead use csv output from previous prediction
             # NOTE: make sure, that the used csv files are from the correct prediction model/ pth file!
             if len(all_csv_paths) > 1:
-                csv_path = [elem for elem in all_csv_paths if orig_img[:-4] == elem.name[:-4]]
+                csv_path = [elem for elem in all_csv_paths if orig_img[:-4] == os.path.basename(elem)[:-4]]
                 if len(csv_path) == 0:
                     # no corresponding csv file for this image
                     continue
@@ -174,7 +174,7 @@ def tracking_main(args):
                     new_df = pd.read_csv(args.csv)
 
                     # load only data from interesting image
-                    new_df = new_df[new_df.apply(lambda row: os.path.splitext(orig_img)[0] in row["filename"], axis=1)]
+                    new_df = new_df[new_df["filename"].str.contains(os.path.splitext(orig_img)[0])]
                     # axis=1 for looping through rows, to remove the '.png' extension in the filename
                     boxes, scores, classes, num_detections = csv_to_boxes(new_df)
                     boxes = np.asarray(boxes)
@@ -183,7 +183,7 @@ def tracking_main(args):
                     continue
         else:
             # just load data from saved list
-            # this works as all_imgs from this file and sorted(glob.glob(args.images)) from predict sort all
+            # this works as all_imgs from this file and sorted(glob(args.images)) from predict sort all
             # image paths so they are perfectly aligned
             # NOTE: the output values from the prediction are of type np.ndarray
             boxes, scores, classes, num_detections = all_boxes[i], all_scores[i], all_classes[i], all_num_detections[i]
@@ -192,9 +192,9 @@ def tracking_main(args):
             boxes = boxes[0]
 
         # look if there are some boxes
-        if len(boxes) == 0:
-            # print("NO BOXES!")
-            continue
+        # if len(boxes) == 0:
+        #     # print("NO BOXES!")
+        #     continue
         # else:
         #     print("BOXES!")
 
@@ -230,7 +230,7 @@ def tracking_main(args):
         )
 
         # print("RECTS: ", rects, rects.shape)
-        objects = ct.update(rects)  # y1,x1,y2,x2
+        objects = rt.update(rects)  # y1,x1,y2,x2
 
         # Start with non-empty lists
         boxes = []
@@ -243,9 +243,8 @@ def tracking_main(args):
             orig_dict = {"filename": total_path, "width": w, "height": h, "class": "spine"}
 
             # Making boxes, classes, scores correct
-            cX, cY, width, height, conf = objects[key]
-            x1, x2 = (cX - width / 2) / w, (cX + width / 2) / w
-            y1, y2 = (cY - height / 2) / h, (cY + height / 2) / h
+            x1, y1, x2, y2, conf = objects[key]
+            
             boxes.append([x1, y1, x2, y2])
             classes.append(1)
             scores.append(conf)
@@ -253,10 +252,10 @@ def tracking_main(args):
             orig_dict.update(
                 {
                     "id": key,
-                    "ymin": round(y1 * h, 2),
-                    "ymax": round(y2 * h, 2),
-                    "xmin": round(x1 * w, 2),
-                    "xmax": round(x2 * w, 2),
+                    "ymin": round(y1, 2),
+                    "ymax": round(y2, 2),
+                    "xmin": round(x1, 2),
+                    "xmax": round(x2, 2),
                     "score": conf,
                 }
             )
